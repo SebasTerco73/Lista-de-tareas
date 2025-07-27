@@ -1,0 +1,11 @@
+{% extends 'listaTareas/layout.html' %}
+{% block body %}
+    <h1>Agregar Tarea</h1>
+    <form method="post">
+        <!-- Agregar a todos los formularios esta linea, es una seguridad de Django -->
+        {% csrf_token %}
+        {{form}}
+        <button type="submit">Enviar</button>     
+    </form>
+    <a href="{% url 'home' %}">Regresar</a>
+{% endblock %}

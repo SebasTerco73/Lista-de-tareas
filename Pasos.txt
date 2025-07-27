@@ -1,0 +1,273 @@
+#### DJANGO: Proyecto compuesto de aplicaciones
+Respetar los nombres, al trabajar con un framework hay que usar los nombres exactos
+
+1) Iniciar el proyecto Django, en la consola:
+###############################################################
+-> django -admin startproject nombreProyecto
+###############################################################
+
+(Genera una carpeta con ese nombre y dentro un archivo (manage.py) y otra carpeta llamada igual a la anterior)
+(La primer carpeta, la que contiene toda, hay que abrirla con el editor de texto (vsc, sublime, etc))
+
+###############################################################
+Dentro del proyecto, para abrirlo desde el visual directamente desde la cmd
+code .
+###############################################################
+
+2) Correr el servidor: Moverse con la consola dentro de la carpeta creada y:
+###############################################################
+-> python manage.py runserver
+###############################################################
+(Eso nos devuelve la direccion del servidor, ej: 120.0.01...., y pegarla en el explorador)
+
+3) Nueva aplicacion (necesita tener el servidor cerrado)(desde la carpeta raiz del proyecto:)
+###############################################################
+-> python manage.py startapp nombreApp
+###############################################################
+
+Partes de la app:
+- views.py -> Que se muestra al usuario cuando visita una ruta
+- models.py -> Base de datos
+- apps.py -> Configuracion
+- admin.py -> Sitio administrativo (viene por defecto con django)
+
+4) urls.py Crear ese archivo dentro de la carpeta de la app creada. Tiene que tener ese nombre exacto
+
+5) Agregar la nueva app a la configuracion del proyecto. 
+A) Dentro de la carpeta del proyecto, buscar settings.py y dentro buscar la CONSTANTE INSTALLED_APPS, y dentro agregar el nombre de la app nueva 
+
+6) Conectar las urls del proyecto raiz con las de una app especifica
+A) Dentro de urls.py del proyecto raiz, junto al import de path agregamos el import de include y dentro de la lista urlpatterns agregar: path('nombreApp/', include('nombreApp.urls')),   ---> Termina con coma aunque no haya otro elemento en la lista
+B) En urls.py de la app, hacer lo siguiente: 
+from django.urls import path
+urlpatterns = []
+
+7) Primer mensaje -> En views.py de la app:
+A) views.py (de la app)  
+from django.shortcuts import render
+from django.http import HttpResponse
+def hola(request):
+    return HttpResponse("Hola mundo")
+B) urls.py (de la app)
+from django.urls import path
+from . import views
+urlpatterns = [
+    path('', views.hola, name='hola'),
+]
+###############################################################
+C) En el explorador: http://127.0.0.1:8000/hola/
+###############################################################
+
+Se pueden crear todas las vistas que se quiera, repitiendo los pasos A y B, el primer argumento del path es la ruta.
+Y la ruta seria /hola/loQueSePusoEnElPath
+views.nombre de la funcion (no de la app)
+El name es opcional, pero ponerlo siempre, y que sea el mismo nombre de la funcion
+
+8) Mostrar archivos html
+A) Nueva carpeta dentro de la app, llamada templates (respetar el nombre), y dentro de templates otra nueva carpeta llamada igual que la app, en el caso de prueba la app se llamaba hola, asi que la carpeta dentro de templates se llamara hola, y dentro de hola crear el index.html y llenarlo a gusto
+B) Funcion en views para mostrarlo:
+def hola(request):
+	return render(request, 'hola/index.html')
+
+9) Ejemplo con parametros
+A)def saludar(request, nombre):
+	context = {'name':nombre}
+	return render(request, 'hola/index.html',context)
+B)path('<str:nombre>/', views.saludar, name="saludo"),
+C) http://127.0.0.1:8000/hola/UnNombre
+Y en el html poner entre doble llaves, la clave a la que queremos acceder
+EJ: <h1> Hola, {{ name }} </h1>
+
+10) Estructuras de control en html. Respetar la indentacion
+	{% if num ==0 %}
+    		<h1> Cara </h1>
+   	{% else %}
+    		<h1>Seca</h1>
+    	{% endif %}
+
+11) CSS: Dentro de la app crear la carpeta static (respetar ese nombre), al mismo nivel que la carpeta templates. Y dentro de static crear los archivos .css
+A) en el .html, en la primer linea, antes del doctype hay que avisarle a django que se van a cargar archivos estaticos con la siguiente linea
+{% load static %}
+B) Relacionar el css al html como siempre pero en el href poner:
+"{% static 'nombreArchivo.css' %}"
+
+12) Herencia de Plantillas/Templates, de html para no repetir codigo
+A) En la carpeta donde estan los html, crear un nuevo archivo layout.html
+B) Hacer la estructura base del html, la que se va a repetir en todos los demas y agregarle (generalmente en el body)
+{ % block body %}
+
+{ % endblock % }
+C) En los html a usar poner al principio
+{ % extends 'carpetaConNombreDeLaApp/layout.html' %}
+{% block body %}
+..... contenido especifico de cada html....
+{% endblock %]
+
+13) Formularios
+A) Nuevo archivo: forms.py (respetar nombre) en donde estan todos los .py, carpeta principal, DE LA APP
+B) forms.py: Crear el metodo
+from django import forms
+class AgregarTarea(forms.Form):    -> o (forms.ModelForm) Django nos permite asociar el formulario a un modelo
+	tarea = forms.CharField()
+# Hay fields para cada tipo de return, ejemplo .BooleanField(), etc. 
+Mirar la documentacion de django
+# El nombre de la variable (tarea) es el que va a figurar en el html
+C)views.py: Importar y llamar al metodo
+from .forms import AgregarTarea
+listaTareas = []
+def add(request):
+	if request.method == "POST":
+		form = AgregarTarea(request.POST) # Lee el texto
+		is form.is_valid():
+			tarea = form.cleaned_data["tarea"] # La clave es el nombre de la variable que pusimos en forms.py
+			listaTareas.append(tarea)
+	else # Si es un get, solo hay que mostrar el html vacio
+		form = AgregarTarea()
+	context = {"form":form}
+	return render(request, "nombreApp/add.html", context)
+D)add.html: Insertar la respuesta del metodo en el html
+<form method="post">
+{% csrf_token %} # Seguridad de django para que no se ingrese algun otro form malicioso desde otro lugar
+{{ form }}
+<button>Enviar</button>
+</form> 
+
+14) Links: En django no se agregan direcciones a mano
+A) html:
+<a href="{% url 'add'%}">Agregar Tarea</a>
+#add sale de la propiedad name, que pusimos en urls.py
+B) Redireccionar - views.py:
+from django.shortcuts import render, redirect   -> A esa linea se le agrego el redirect
+#Cambiar el return del metodo add
+tareas.append(tarea) #hasta aca igual
+return redirect('home') # home es la propiedad name de urls.py
+
+15) Base de datos - models.py
+A) Por defecto Django usa sqlite3 - Ver en DATABASES en el settings.py. Si queremos usar otra, hay que editar esas lineas. Python ya tiene integrado sqlite3
+B) python manage.py migrate - Crear las tablas que django trae, entre otras las del sitio administrativo
+###############################################################
+C) python manage.py createsuperuser 
+###############################################################
+Crear un super usuario - Darle un nombre, email es opcional - contraseña. Abrir en el navegador localhost:8000/admin/ para ir al sitio administrativo de django. En user se puede ver los usuarios ya creados, y con la contraseña encriptada!
+
+16) Crear clase/tabla/Modelo 
+A)models.py
+class Empresa(models.Model):
+nombre = models.CharField(max_lenght=20)
+fundacion = models.IntegerField()
+B) Con cada cambio en models.py hay que hacer las migraciones
+python manage.py makemigrations  -> Crea el .py con los cambios necesarios
+python manage.py migrate	 -> Efectua los cambios creados antes
+Se creara automaticamente la carpeta migrations, con los cambios que hicimos
+C) Para mostrar el modelo creado - admin.py
+from .models import Empresa
+admin.site.register(Empresa)
+D) Los registros creados se van a ver como objects, para cambiar eso dentro de class Empresa (al final) agregar:
+def __str__(self):
+	return self.nombre
+---
+
+17) Hacerlo desde la consola, para que los comandos se ejecuten 1 sola vez:
+A) python manage.py shell -> Abre el interprete de python
+B) from pruebadb.models import Empresa, Programador (o usar el * para all) -> Import de las tablas 
+C)google = Empresa(nombre="Google", fundacion=1998) -> Nuevo insert/Crea la instancia
+D)google.save() -> Se guardan las instancias
+C y D Forma2 ) Otra manera de hacer lo mismo, no necesita el .save()
+yahoo = Empresa.objects.create(nombre="Yahoooooo", fundacion=1996)
+E) Editar
+nombreVariable.propiedad = valor
+yahoo.nombre = "Yahoo"
+yahoo.save()
+F) Eliminar yahoo.delete()
+G) Crear programador:  john = Programador(nombre="John", empresa=yahoo)
+Si no se tiene la instancia, se explica mas abajo como resolverlo
+
+18)Gets Ver datos: 
+A) Variable o variable.propiedad - yahoo o yahoo.nombre
+B) Con Instancias: programador.empresa.nombreEmpresa - john.yahoo.nombreEmpresa
+C) De querer hacerlo al reves (desde empresa a programador) y no tener una instancia en empresa hacer lo siguiente:
+google.programador_set.all() -> Devuelve todos los programadores que tiene google
+D) related_name -> En la creacion de la clase, en la instancia de empresa agregar esa propiedad, al final
+class Programador.......
+	empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="empleados")
+Ahora se la puede llamar con ese nombre cuando se quiere acceder a la empresa del programador:
+google.empleados.all() -> Al tener related_name ya no lleva el "_set" del punto C)
+
+Select all = Modelo.ObjetoManagerDeDjango.all() -> Empresa.objects.all()
+#Al final se le puede agregar la cantidad de datos que queremos
+Empresa.objects.all()[:4] -> Los primeros 4
+Empresa.objects.all()[5:10] -> Del 5 al 10
+
+# Se puede buscar por id tambien, pero el id se crea automatico por django, O por llave primaria, que es la id
+Empresa.objects.get(nombre = "Google") -> Un solo dato.
+Empresa.objects.get(id=1)
+Empresa.objects.get(pk=1)
+
+# Where - .filter (doble guion bajo en el exact - Case sensitive)
+Lenguaje.objects.filter(nombre__exact="Java") -> __exact es el por defecto, asi que no hace falta ponerlo en este caso
+# iexact - Ignora mayusculas y minusculas 
+Lenguaje.objects.filter(nombre__iexact="Java")
+Esto devuelve una LISTA, para obtener solo el valor usar el metodo .get() al final
+###############################################################
+lenguaje = Lenguaje.objects.filter(nombre__iexact="Java").get()
+###############################################################
+
+# Exclude - Excluir - Opuesto al filter
+Lenguaje.objects.exlude(nombre = "python")
+
+# Mayor / Menor 
+Programador.objects.filter(edad__gt=25) -> (greater than (gt) >)
+Programador.objects.filter(edad__gte=25) -> (greater than or equal (gte) >=)
+Programador.objects.filter(edad__lt=25) -> (less than (lt) <)
+Programador.objects.filter(edad__lte=25) -> (less than or equal (lte) <=)
+
+# Contiene 
+Programador.objects.filter(nombre__contains="jo")
+
+# Elementos de una lista
+Programador.objects.filter(nombre__in=["Jose","Joel","Jaime"])
+
+# Primera letra - Ultima letra
+Programador.objects.filter(nombre__startswith="M")
+Programador.objects.filter(nombre__endswith="L")
+
+# Valores nulos / No nulos
+Programador.objects.filter(nombre__isnull=True)
+Programador.objects.filter(nombre__isnull=False)
+
+# Conjuncion and
+Programador.objects.filter(edad__gte=23).filter(empresa__nombre__iexact="google")
+Programador.objects.filter(edad__gte=23, empresa__nombre__iexact="google")
+
+# Disyunción or
+from django.db.models import Q
+Programador.objects.filter(
+    Q(edad__gte=23) | Q(empresa__nombre__iexact="google")
+)
+
+# Cantidad de elementos
+Programador.objects.count()
+
+# Ordenar
+Programador.objects.all().order_by("nombre") -> Ascendente
+Programador.objects.all().order_by("-nombre") -> Descendente
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Salir del servidor = control+c *2
+
